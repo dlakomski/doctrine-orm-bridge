@@ -2,6 +2,8 @@
 
 namespace SimpleBus\DoctrineORMBridge\Tests\EventListener;
 
+use Doctrine\ORM\Events;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SimpleBus\DoctrineORMBridge\EventListener\CollectsEventsFromEntities;
 use SimpleBus\DoctrineORMBridge\Tests\EventListener\Fixtures\Entity\EventRecordingEntity;
@@ -25,12 +27,10 @@ class CollectsEventsFromEntitiesTest extends TestCase
         parent::setUp();
 
         $this->eventSubscriber = new CollectsEventsFromEntities();
-        $this->getEventManager()->addEventSubscriber($this->eventSubscriber);
+        $this->getEventManager()->addEventListener([Events::preFlush, Events::postFlush], $this->eventSubscriber);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function itCollectsEventsFromPersistedEntitiesAndErasesThemAfterwards(): void
     {
         $entity = new EventRecordingEntity();
@@ -41,9 +41,7 @@ class CollectsEventsFromEntitiesTest extends TestCase
         $this->assertEntityHasNoRecordedEvents($entity);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function itCollectsEventsFromModifiedEntitiesAndErasesThemAfterwards(): void
     {
         $entity = new EventRecordingEntity();
@@ -58,9 +56,7 @@ class CollectsEventsFromEntitiesTest extends TestCase
         $this->assertEntityHasNoRecordedEvents($entity);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function itCollectsEventsFromRemovedEntitiesAndErasesThemAfterwards(): void
     {
         $entity = new EventRecordingEntity();
@@ -75,9 +71,7 @@ class CollectsEventsFromEntitiesTest extends TestCase
         $this->assertEntityHasNoRecordedEvents($entity);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function itCollectsEventsFromNotDirtyEntitiesAndErasesThemAfterwards(): void
     {
         $entity = new EventRecordingEntity();
@@ -92,9 +86,7 @@ class CollectsEventsFromEntitiesTest extends TestCase
         $this->assertEntityHasNoRecordedEvents($entity);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function itCollectsEventsFromPrePersistLifecycleCallbacksOfEntitiesAndErasesThemAfterwards(): void
     {
         $entity = new EventRecordingEntity();
@@ -105,9 +97,7 @@ class CollectsEventsFromEntitiesTest extends TestCase
         $this->assertEntityHasNoRecordedEvents($entity);
     }
 
-    /**
-     * @test
-     */
+    #[Test]
     public function itCollectsEventsFromPreUpdateLifecycleCallbacksOfDirtyEntitiesAndErasesThemAfterwards(): void
     {
         $entity = new EventRecordingEntity();

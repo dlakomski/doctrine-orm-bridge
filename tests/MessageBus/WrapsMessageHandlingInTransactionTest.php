@@ -6,6 +6,8 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\Persistence\ManagerRegistry;
 use Error;
 use Exception;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use SimpleBus\DoctrineORMBridge\MessageBus\WrapsMessageHandlingInTransaction;
@@ -13,9 +15,7 @@ use Throwable;
 
 class WrapsMessageHandlingInTransactionTest extends TestCase
 {
-    /**
-     * @test
-     */
+    #[Test]
     public function itWrapsTheNextMiddlewareInATransaction(): void
     {
         $nextIsCalled = false;
@@ -28,24 +28,22 @@ class WrapsMessageHandlingInTransactionTest extends TestCase
         $entityManagerName = 'default';
         $entityManager = $this->getMockBuilder(EntityManager::class)
             ->disableOriginalConstructor()
-            ->setMethods(['transactional'])
+            ->onlyMethods(['transactional'])
             ->getMock();
         $entityManager
             ->expects($this->once())
             ->method('transactional')
-            ->will(
-                $this->returnCallback(
-                    function (callable $transactionalCallback) {
-                        $transactionalCallback();
-                    }
-                )
+            ->willReturnCallback(
+                function (callable $transactionalCallback) {
+                    $transactionalCallback();
+                }
             );
 
         $managerRegistry
             ->expects($this->any())
             ->method('getManager')
             ->with($entityManagerName)
-            ->will($this->returnValue($entityManager));
+            ->willReturn($entityManager);
 
         $middleware = new WrapsMessageHandlingInTransaction($managerRegistry, $entityManagerName);
 
@@ -54,10 +52,54 @@ class WrapsMessageHandlingInTransactionTest extends TestCase
         $this->assertTrue($nextIsCalled);
     }
 
+    #[Test]
+    #[DataProvider('errorProvider')]
+    public function itResetsTheEntityManagerIfTheTransactionFails(Throwable $error): void
+    {
+        $message = $this->dummyMessage();
+        $managerRegistry = $this->createMock(ManagerRegistry::class);
+        $entityManagerName = 'default';
+        $alwaysFailingEntityManager = $this->getMockBuilder(EntityManager::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['transactional'])
+            ->getMock();
+        $alwaysFailingEntityManager
+            ->expects($this->once())
+            ->method('transactional')
+            ->willReturnCallback(
+                function () use ($error) {
+                    throw $error;
+                }
+            );
+
+        $managerRegistry
+            ->expects($this->any())
+            ->method('getManager')
+            ->with($entityManagerName)
+            ->willReturn($alwaysFailingEntityManager);
+
+        $managerRegistry
+            ->expects($this->once())
+            ->method('resetManager')
+            ->with($entityManagerName);
+
+        $middleware = new WrapsMessageHandlingInTransaction($managerRegistry, $entityManagerName);
+
+        try {
+            $middleware->handle(
+                $message,
+                function () {}
+            );
+            $this->fail('An exception should have been thrown');
+        } catch (Throwable $actualError) {
+            $this->assertSame($error, $actualError);
+        }
+    }
+
     /**
      * @return array<Throwable[]>
      */
-    public function errorProvider(): array
+    public static function errorProvider(): array
     {
         return [
             [
@@ -70,55 +112,6 @@ class WrapsMessageHandlingInTransactionTest extends TestCase
     }
 
     /**
-     * @test
-     * @dataProvider errorProvider
-     */
-    public function itResetsTheEntityManagerIfTheTransactionFails(Throwable $error): void
-    {
-        $message = $this->dummyMessage();
-        $managerRegistry = $this->createMock(ManagerRegistry::class);
-        $entityManagerName = 'default';
-        $alwaysFailingEntityManager = $this->getMockBuilder(EntityManager::class)
-            ->disableOriginalConstructor()
-            ->setMethods(['transactional'])
-            ->getMock();
-        $alwaysFailingEntityManager
-            ->expects($this->once())
-            ->method('transactional')
-            ->will(
-                $this->returnCallback(
-                    function () use ($error) {
-                        throw $error;
-                    }
-                )
-            );
-
-        $managerRegistry
-            ->expects($this->any())
-            ->method('getManager')
-            ->with($entityManagerName)
-            ->will($this->returnValue($alwaysFailingEntityManager));
-
-        $managerRegistry
-            ->expects($this->once())
-            ->method('resetManager')
-            ->with($entityManagerName);
-
-        $middleware = new WrapsMessageHandlingInTransaction($managerRegistry, $entityManagerName);
-
-        try {
-            $middleware->handle(
-                $message,
-                function () {
-                }
-            );
-            $this->fail('An exception should have been thrown');
-        } catch (Throwable $actualError) {
-            $this->assertSame($error, $actualError);
-        }
-    }
-
-    /**
      * @return DummyMessage|MockObject
      */
     private function dummyMessage()
@@ -127,6 +120,4 @@ class WrapsMessageHandlingInTransactionTest extends TestCase
     }
 }
 
-class DummyMessage
-{
-}
+class DummyMessage {}

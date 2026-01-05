@@ -10,6 +10,7 @@ use Doctrine\Common\EventManager;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\ORM\EntityManager;
+use RuntimeException;
 use SimpleBus\DoctrineORMBridge\Tests\PHPUnitTestServiceContainer\ServiceProvider;
 use SimpleBus\DoctrineORMBridge\Tests\PHPUnitTestServiceContainer\ServiceProvider\DoctrineDbalServiceProvider;
 use SimpleBus\DoctrineORMBridge\Tests\PHPUnitTestServiceContainer\ServiceProvider\DoctrineOrmServiceProvider;
@@ -38,16 +39,28 @@ trait TestCaseWithEntityManager
 
     protected function getEntityManager(): EntityManager
     {
+        if (null === $this->container) {
+            throw new RuntimeException('No container');
+        }
+
         return $this->container['doctrine_orm.entity_manager'];
     }
 
     protected function getEventManager(): EventManager
     {
+        if (null === $this->container) {
+            throw new RuntimeException('No container');
+        }
+
         return $this->container['doctrine_dbal.event_manager'];
     }
 
     protected function getConnection(): Connection
     {
+        if (null === $this->container) {
+            throw new RuntimeException('No container');
+        }
+
         return $this->container['doctrine_dbal.connection'];
     }
 }

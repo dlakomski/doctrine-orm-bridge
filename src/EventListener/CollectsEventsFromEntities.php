@@ -2,38 +2,25 @@
 
 namespace SimpleBus\DoctrineORMBridge\EventListener;
 
-use Doctrine\Common\EventSubscriber;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Event\PreFlushEventArgs;
 use Doctrine\ORM\Events;
 use Doctrine\ORM\Proxy\Proxy;
 use SimpleBus\Message\Recorder\ContainsRecordedMessages;
 
-class CollectsEventsFromEntities implements EventSubscriber, ContainsRecordedMessages
+class CollectsEventsFromEntities implements ContainsRecordedMessages
 {
     /**
      * @var object[]
      */
     private array $collectedEvents = [];
 
-    public function getSubscribedEvents(): array
-    {
-        return [
-            Events::preFlush,
-            Events::postFlush,
-        ];
-    }
-
     public function preFlush(PreFlushEventArgs $eventArgs): void
     {
-        $em = $eventArgs->getEntityManager();
+        $em = $eventArgs->getObjectManager();
         $uow = $em->getUnitOfWork();
         foreach ($uow->getIdentityMap() as $entities) {
             foreach ($entities as $entity) {
-                if (null === $entity) {
-                    continue;
-                }
-
                 $this->collectEventsFromEntity($entity);
             }
         }
@@ -48,14 +35,10 @@ class CollectsEventsFromEntities implements EventSubscriber, ContainsRecordedMes
      */
     public function postFlush(PostFlushEventArgs $eventArgs): void
     {
-        $em = $eventArgs->getEntityManager();
+        $em = $eventArgs->getObjectManager();
         $uow = $em->getUnitOfWork();
         foreach ($uow->getIdentityMap() as $entities) {
             foreach ($entities as $entity) {
-                if (null === $entity) {
-                    continue;
-                }
-
                 $this->collectEventsFromEntity($entity);
             }
         }

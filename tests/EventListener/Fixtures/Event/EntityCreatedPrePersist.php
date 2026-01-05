@@ -2,6 +2,4 @@
 
 namespace SimpleBus\DoctrineORMBridge\Tests\EventListener\Fixtures\Event;
 
-class EntityCreatedPrePersist
-{
-}
+class EntityCreatedPrePersist {}
