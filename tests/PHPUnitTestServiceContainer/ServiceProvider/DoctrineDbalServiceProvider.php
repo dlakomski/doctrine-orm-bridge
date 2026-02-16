@@ -45,11 +45,7 @@ final class DoctrineDbalServiceProvider implements ServiceProvider
         };
 
         $serviceContainer['doctrine_dbal.connection'] = function (ServiceContainer $serviceContainer) {
-            return DriverManager::getConnection(
-                $serviceContainer['doctrine_dbal.connection_configuration'],
-                null,
-                $serviceContainer['doctrine_dbal.event_manager']
-            );
+            return DriverManager::getConnection($serviceContainer['doctrine_dbal.connection_configuration']);
         };
 
         $serviceContainer['doctrine_dbal.schema'] = $this->schema;
@@ -58,7 +54,7 @@ final class DoctrineDbalServiceProvider implements ServiceProvider
     private function createSchema(Connection $connection, Schema $schema): void
     {
         foreach ($schema->toSql($connection->getDatabasePlatform()) as $sql) {
-            $connection->exec($sql);
+            $connection->executeStatement($sql);
         }
     }
 
